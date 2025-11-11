@@ -1,100 +1,104 @@
-import React, { useState } from "react";
-import axios from "axios";
-import "../App.css";
+import { useState } from 'react';
 
-import { useNavigate } from "react-router-dom";
+/*
+  AuthPage handles both Register and Login (toggle).
+  onAuth({ username }) will be called on successful login.
+  Users are stored in localStorage under 'miniblog_users' as [{username,password}, ...]
+*/
 
-const AuthPage = ({ setUser }) => {
-  const [isLogin, setIsLogin] = useState(true);
-  const [formData, setFormData] = useState({ name: "", email: "", password: "" });
-  const navigate = useNavigate();
+export default function AuthPage({ onAuth }) {
+  const [mode, setMode] = useState('login'); // 'login' or 'register'
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [notice, setNotice] = useState('');
 
-  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
+  function getUsers() {
+    return JSON.parse(localStorage.getItem('miniblog_users') || '[]');
+  }
 
-  const handleSubmit = async (e) => {
+  function saveUsers(list) {
+    localStorage.setItem('miniblog_users', JSON.stringify(list));
+  }
+
+  function submit(e) {
     e.preventDefault();
-    try {
-      if (isLogin) {
-        // Login request
-        const res = await axios.post("http://localhost:5000/api/auth/login", {
-          email: formData.email,
-          password: formData.password,
-        });
+    setNotice('');
 
-        // Build user object and set it in parent
-        const loggedUser = { name: res.data.userName, email: res.data.userEmail };
-        setUser(loggedUser);
-
-        // Navigate to home page
-        navigate("/home");
-      } else {
-        // Register request
-        await axios.post("http://localhost:5000/api/auth/register", formData);
-        alert("Registered successfully. Now login.");
-        setIsLogin(true);
-      }
-
-      setFormData({ name: "", email: "", password: "" });
-    } catch (err) {
-      const msg = err.response?.data?.message || err.response?.data?.error || err.message;
-      alert("Error: " + msg);
+    const uname = username.trim();
+    if (!uname || !password) {
+      setNotice('Please provide both username and password.');
+      return;
     }
-  };
+
+    const users = getUsers();
+
+    if (mode === 'register') {
+      const exists = users.some(u => u.username.toLowerCase() === uname.toLowerCase());
+      if (exists) {
+        setNotice('Username already exists. Pick another one.');
+        return;
+      }
+      users.push({ username: uname, password });
+      saveUsers(users);
+      setNotice('Registration successful — you can now login.');
+      setMode('login');
+      setUsername('');
+      setPassword('');
+      return;
+    }
+
+    // login flow
+    const found = users.find(u => u.username.toLowerCase() === uname.toLowerCase() && u.password === password);
+    if (!found) {
+      setNotice('Invalid username or password.');
+      return;
+    }
+
+    onAuth({ username: found.username });
+  }
 
   return (
-    <div style={{ margin: 30 }}>
-      <h2>{isLogin ? "Login" : "Register"}</h2>
-      <form onSubmit={handleSubmit}>
-        {!isLogin && (
-          <div>
-            <input
-              name="name"
-              placeholder="Name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-            />
-          </div>
-        )}
+    <div className="auth-card">
+      <h2>{mode === 'register' ? 'Register' : 'Login'}</h2>
 
-        <div>
+      <form className="auth-form" onSubmit={submit}>
+        <label>
+          <span>Username</span>
           <input
-            type="email"
-            name="email"
-            placeholder="Email"
-            value={formData.email}
-            onChange={handleChange}
-            required
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="e.g. johndoe"
+            autoComplete="username"
           />
-        </div>
+        </label>
 
-        <div>
+        <label>
+          <span>Password</span>
           <input
             type="password"
-            name="password"
-            placeholder="Password"
-            value={formData.password}
-            onChange={handleChange}
-            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="password"
+            autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
           />
-        </div>
+        </label>
 
-        <div style={{ marginTop: 8 }}>
-          <button type="submit">{isLogin ? "Login" : "Register"}</button>
+        {notice && <div className="msg">{notice}</div>}
+
+        <div className="controls">
+          <button className="btn" type="submit">
+            {mode === 'register' ? 'Create account' : 'Login'}
+          </button>
+
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={() => { setMode(prev => prev === 'login' ? 'register' : 'login'); setNotice(''); }}
+          >
+            {mode === 'login' ? 'New here? Register' : 'Have an account? Login'}
+          </button>
         </div>
       </form>
-
-      <p style={{ marginTop: 10 }}>
-        {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
-        <span
-          style={{ color: "blue", cursor: "pointer" }}
-          onClick={() => setIsLogin(!isLogin)}
-        >
-          {isLogin ? "Register" : "Login"}
-        </span>
-      </p>
     </div>
   );
-};
-
-export default AuthPage;
+}

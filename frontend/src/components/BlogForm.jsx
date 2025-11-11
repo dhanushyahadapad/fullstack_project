@@ -1,33 +1,29 @@
-import React, { useState } from "react";
-import axios from "axios";
-import "../App.css";
+import { useState } from 'react';
 
+export default function BlogForm({ onAdd }) {
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [err, setErr] = useState('');
 
-const BlogForm = ({ userEmail, refreshBlogs }) => {
-  const [formData, setFormData] = useState({ title: "", content: "" });
-
-  const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
-
-  const handleSubmit = async (e) => {
+  function submit(e) {
     e.preventDefault();
-    try {
-      await axios.post("http://localhost:5000/api/blogs", { ...formData, authorEmail: userEmail });
-      alert("✅ Blog posted!");
-      setFormData({ title: "", content: "" });
-      refreshBlogs();
-    } catch (err) {
-      alert("❌ Failed to post blog");
-    }
-  };
+    setErr('');
+    if (!title.trim()) return setErr('Title required.');
+    if (!content.trim()) return setErr('Content required.');
+    onAdd({ id: Date.now(), title: title.trim(), content: content.trim(), created: new Date().toISOString() });
+    setTitle('');
+    setContent('');
+  }
 
   return (
-    <form onSubmit={handleSubmit} style={{ marginBottom: "20px" }}>
-      <h3>Create Blog</h3>
-      <input name="title" placeholder="Title" value={formData.title} onChange={handleChange} required />
-      <textarea name="content" placeholder="Content" value={formData.content} onChange={handleChange} required />
-      <button type="submit">Post Blog</button>
+    <form className="blog-form" onSubmit={submit}>
+      <h3>Add a new post</h3>
+      <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" />
+      <textarea value={content} onChange={(e) => setContent(e.target.value)} rows={6} placeholder="Write your blog here..."></textarea>
+      {err && <div className="msg">{err}</div>}
+      <div className="controls">
+        <button className="btn" type="submit">Add Blog</button>
+      </div>
     </form>
   );
-};
-
-export default BlogForm;
+}

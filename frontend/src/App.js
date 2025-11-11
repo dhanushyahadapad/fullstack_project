@@ -1,31 +1,49 @@
-import React, { useState, useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import AuthPage from "./components/AuthPage";
-import Home from "./components/Home";
+import { useState, useEffect } from 'react';
+import './App.css';
+import AuthPage from './components/AuthPage';
+import Home from './components/Home';
 
-function App() {
-  const [user, setUser] = useState({ name: "", email: "" });
+export default function App() {
+  const [user, setUser] = useState(null);
 
-  // Load user from localStorage on app start
   useEffect(() => {
-    const saved = localStorage.getItem("mini_blog_user");
+    const saved = localStorage.getItem('miniblog_currentUser');
     if (saved) setUser(JSON.parse(saved));
   }, []);
 
-  // Persist user to localStorage whenever it changes
-  useEffect(() => {
-    if (user && user.email) localStorage.setItem("mini_blog_user", JSON.stringify(user));
-    else localStorage.removeItem("mini_blog_user");
-  }, [user]);
+  function handleLogin(userObj) {
+    setUser(userObj);
+    localStorage.setItem('miniblog_currentUser', JSON.stringify(userObj));
+  }
+
+  function handleLogout() {
+    setUser(null);
+    localStorage.removeItem('miniblog_currentUser');
+  }
 
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<AuthPage setUser={setUser} />} />
-        <Route path="/home" element={<Home user={user} setUser={setUser} />} />
-      </Routes>
-    </Router>
+    <div className="app-root">
+      <header className="app-header">
+        <h1 className="brand">MiniBlog</h1>
+        <div className="header-right">
+          {user ? (
+            <>
+              <span className="welcome">Welcome, <strong>{user.username}</strong></span>
+              <button className="btn btn-ghost" onClick={handleLogout}>Logout</button>
+            </>
+          ) : null}
+        </div>
+      </header>
+
+      <main className="app-main">
+        {!user ? (
+          <AuthPage onAuth={handleLogin} />
+        ) : (
+          <Home user={user} />
+        )}
+      </main>
+
+      <footer className="app-footer">&copy; {new Date().getFullYear()} MiniBlog</footer>
+    </div>
   );
 }
-
-export default App;
